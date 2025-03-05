@@ -91,6 +91,7 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
 
       quill.on("text-change", (delta, oldDelta, source) => {
         onTextChangeRef.current?.(delta, oldDelta, source);
+        removeUnusedBlobUrls(quill, blobUrlsRef);
       });
 
       quill.on("selection-change", (range, oldRange, source) => {
@@ -172,4 +173,32 @@ const handleImageUpload = (
     // Move cursor forward to prevent infinite loop issues
     quill.setSelection(range.index + 1);
   };
+};
+
+/**
+ * Removes unused blob URLs when an image is deleted from the editor
+ */
+const removeUnusedBlobUrls = (
+  quill: Quill,
+  blobUrlsRef: MutableRefObject<string[]>
+) => {
+  // Get all current images inside the editor
+  const editorImages = Array.from(quill.root.querySelectorAll("img")).map(
+    (img) => img.getAttribute("src")
+  );
+
+  // Find blob URLs that are no longer in the editor
+  const removedBlobUrls = blobUrlsRef.current.filter(
+    (url) => !editorImages.includes(url)
+  );
+
+  // Revoke removed blob URLs
+  removedBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+
+  // Update blob URLs list
+  blobUrlsRef.current = blobUrlsRef.current.filter((url) =>
+    editorImages.includes(url)
+  );
+
+  console.log("blobUrlsRef removed", blobUrlsRef.current);
 };
