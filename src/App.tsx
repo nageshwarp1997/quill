@@ -21,7 +21,7 @@ const App: React.FC = () => {
       />
       <div className="preview">
         <h3>Preview:</h3>
-        {/* <div dangerouslySetInnerHTML={{ __html: editorContent }} />{" "} */}
+        <div dangerouslySetInnerHTML={{ __html: editorContent }} />
         {/* ✅ Render HTML safely */}
       </div>
     </div>
