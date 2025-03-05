@@ -33,6 +33,7 @@ interface EditorProps {
   readOnly?: boolean;
   defaultValue?: Delta;
   onTextChange?: (delta: Delta, oldDelta: Delta, source: string) => void;
+  blobUrlsRef: MutableRefObject<string[]>;
   onSelectionChange?: (
     range: Range | null,
     oldRange: Range | null,
@@ -41,13 +42,13 @@ interface EditorProps {
 }
 
 const NewEditor = forwardRef<Quill | null, EditorProps>(
-  ({ readOnly, defaultValue, onTextChange, onSelectionChange }, ref) => {
+  (
+    { readOnly, defaultValue, onTextChange, onSelectionChange, blobUrlsRef },
+    ref
+  ) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const defaultValueRef = useRef(defaultValue);
     const onTextChangeRef = useRef(onTextChange);
     const onSelectionChangeRef = useRef(onSelectionChange);
-    const quillInstance = useRef<Quill | null>(null);
-    const blobUrlsRef = useRef<string[]>([]); // Store blob URLs for cleanup
 
     useLayoutEffect(() => {
       onTextChangeRef.current = onTextChange;
@@ -85,8 +86,8 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
         },
       });
 
-      if (defaultValueRef.current) {
-        quill.setContents(defaultValueRef.current);
+      if (defaultValue) {
+        quill.setContents(defaultValue);
       }
 
       quill.on("text-change", (delta, oldDelta, source) => {
@@ -98,8 +99,7 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
         onSelectionChangeRef.current?.(range, oldRange, source);
       });
 
-      // Assign instance to ref safely
-      quillInstance.current = quill;
+      // ✅ Set ref directly (no need for `quillInstance`)
       if (typeof ref === "function") {
         ref(quill);
       } else if (ref && "current" in ref) {
@@ -107,7 +107,6 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
       }
 
       return () => {
-        quillInstance.current = null;
         if (ref && "current" in ref) {
           ref.current = null;
         }
@@ -117,11 +116,13 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
         blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         blobUrlsRef.current = [];
       };
-    }, [ref]);
+    }, [blobUrlsRef, defaultValue, ref]);
 
     useEffect(() => {
-      quillInstance.current?.enable(!readOnly);
-    }, [readOnly]);
+      if (ref && typeof ref !== "function" && ref.current) {
+        ref.current.enable(!readOnly);
+      }
+    }, [readOnly, ref]);
 
     return <div ref={containerRef} />;
   }
