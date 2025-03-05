@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
 import Quill, { Delta, Range } from "quill";
-import "quill/dist/quill.snow.css";
+// import "quill/dist/quill.snow.css";
 
 interface EditorProps {
   readOnly?: boolean;
@@ -36,6 +36,24 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
 
       const quill = new Quill(editorContainer, {
         theme: "snow",
+        modules: {
+          toolbar: {
+            container: [
+              [{ header: [1, 2, 3, 4, false] }],
+              ["bold", "italic", "underline"],
+              [{ list: "ordered" }, { list: "bullet" }],
+              [{ script: "sub" }, { script: "super" }],
+              [{ indent: "-1" }, { indent: "+1" }],
+              // [{ direction: "rtl" }], // a text directionality marker
+              [{ size: ["small", false, "large", "huge"] }],
+              ["link", "image"],
+              ["clean"],
+            ],
+            handlers: {
+              image: () => handleImageUpload(quill), // ✅ Custom image handler
+            },
+          },
+        },
       });
 
       if (defaultValueRef.current) {
@@ -78,3 +96,29 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
 NewEditor.displayName = "Editor";
 
 export default NewEditor;
+
+/**
+ * Handles image uploads and inserts them into Quill
+ */
+const handleImageUpload = (quill: Quill) => {
+  const input = document.createElement("input");
+  input.setAttribute("type", "file");
+  input.setAttribute("accept", "image/*");
+  input.click();
+
+  input.onchange = async () => {
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const range = quill.getSelection();
+      if (range) {
+        quill.insertEmbed(range.index, "image", reader.result as string);
+      }
+    };
+
+    reader.readAsDataURL(file); // Convert image to base64
+  };
+};

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import "quill/dist/quill.snow.css";
-// import "quill/dist/quill.bubble.css";
+import "quill/dist/quill.bubble.css";
 import NewEditor from "./NewEditor";
 import Quill from "quill";
 
@@ -21,7 +21,7 @@ const App: React.FC = () => {
       />
       <div className="preview">
         <h3>Preview:</h3>
-        <div dangerouslySetInnerHTML={{ __html: editorContent }} />{" "}
+        {/* <div dangerouslySetInnerHTML={{ __html: editorContent }} />{" "} */}
         {/* ✅ Render HTML safely */}
       </div>
     </div>
