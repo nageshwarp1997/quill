@@ -1,6 +1,33 @@
-import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  forwardRef,
+  MutableRefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import Quill, { Delta, Range } from "quill";
-// import "quill/dist/quill.snow.css";
+import "quill/dist/quill.snow.css";
+
+// Import Image format from Quill
+const Image = Quill.import("formats/image") as {
+  sanitize?: (url: string) => string;
+};
+
+// Ensure Image has a sanitize method before modifying
+if (Image && typeof Image.sanitize === "function") {
+  Image.sanitize = function (url: string): string {
+    if (url.startsWith("blob:")) {
+      return url; // Allow Blob URLs
+    }
+    const Link = Quill.import("formats/link") as {
+      sanitize?: (url: string) => string;
+    };
+    return Link?.sanitize ? Link.sanitize(url) : url; // Use link sanitizer if available
+  };
+}
+
+// Register the modified Image format
+Quill.register("formats/image", Image, true);
 
 interface EditorProps {
   readOnly?: boolean;
@@ -20,6 +47,7 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
     const onTextChangeRef = useRef(onTextChange);
     const onSelectionChangeRef = useRef(onSelectionChange);
     const quillInstance = useRef<Quill | null>(null);
+    const blobUrlsRef = useRef<string[]>([]); // Store blob URLs for cleanup
 
     useLayoutEffect(() => {
       onTextChangeRef.current = onTextChange;
@@ -44,13 +72,14 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
               [{ list: "ordered" }, { list: "bullet" }],
               [{ script: "sub" }, { script: "super" }],
               [{ indent: "-1" }, { indent: "+1" }],
-              // [{ direction: "rtl" }], // a text directionality marker
               [{ size: ["small", false, "large", "huge"] }],
               ["link", "image"],
               ["clean"],
             ],
             handlers: {
-              image: () => handleImageUpload(quill), // ✅ Custom image handler
+              image: function () {
+                handleImageUpload(quill, blobUrlsRef);
+              },
             },
           },
         },
@@ -68,11 +97,11 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
         onSelectionChangeRef.current?.(range, oldRange, source);
       });
 
-      // Assign instance to ref
+      // Assign instance to ref safely
       quillInstance.current = quill;
       if (typeof ref === "function") {
         ref(quill);
-      } else if (ref) {
+      } else if (ref && "current" in ref) {
         ref.current = quill;
       }
 
@@ -82,6 +111,10 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
           ref.current = null;
         }
         container.innerHTML = ""; // Cleanup
+
+        // Revoke all blob URLs to free memory
+        blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        blobUrlsRef.current = [];
       };
     }, [ref]);
 
@@ -100,7 +133,10 @@ export default NewEditor;
 /**
  * Handles image uploads and inserts them into Quill
  */
-const handleImageUpload = (quill: Quill) => {
+const handleImageUpload = (
+  quill: Quill,
+  blobUrlsRef: MutableRefObject<string[]>
+) => {
   const input = document.createElement("input");
   input.setAttribute("type", "file");
   input.setAttribute("accept", "image/*");
@@ -110,15 +146,30 @@ const handleImageUpload = (quill: Quill) => {
     if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
-    const reader = new FileReader();
 
-    reader.onload = () => {
-      const range = quill.getSelection();
-      if (range) {
-        quill.insertEmbed(range.index, "image", reader.result as string);
-      }
-    };
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image size must be under 2MB!");
+      return;
+    }
 
-    reader.readAsDataURL(file); // Convert image to base64
+    // Create a Blob URL for the image
+    const blobUrl = URL.createObjectURL(file);
+    console.log("✅ Image Blob URL:", blobUrl);
+
+    // Get the current selection in the Quill editor
+    const range = quill.getSelection();
+    if (!range) return;
+
+    // Store blob URL for cleanup
+    blobUrlsRef.current.push(blobUrl);
+
+    console.log("blobUrlsRef", blobUrlsRef.current);
+
+    // Insert the image with the blob URL
+    quill.insertEmbed(range.index, "image", blobUrl, "user");
+
+    // Move cursor forward to prevent infinite loop issues
+    quill.setSelection(range.index + 1);
   };
 };
