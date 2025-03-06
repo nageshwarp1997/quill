@@ -1,9 +1,4 @@
-import {
-  forwardRef,
-  MutableRefObject,
-  useEffect,
-  useRef,
-} from "react";
+import { forwardRef, MutableRefObject, useEffect, useRef } from "react";
 import Quill, { Delta, Range } from "quill";
 import "quill/dist/quill.snow.css";
 
@@ -65,7 +60,7 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
               [{ list: "ordered" }, { list: "bullet" }],
               [{ script: "sub" }, { script: "super" }],
               [{ indent: "-1" }, { indent: "+1" }],
-              [{ size: ["small", false, "large", "huge"] }],
+              [{ size: ["small", "medium", "large", "huge"] }],
               ["link", "image"],
               ["clean"],
             ],
