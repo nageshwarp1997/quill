@@ -1,11 +1,10 @@
 import React, { useRef } from "react";
 import "quill/dist/quill.snow.css";
 import NewEditor from "./NewEditor";
-import Quill, { Delta } from "quill";
+import Quill, { Delta, Range } from "quill";
 
 const App: React.FC = () => {
   const blobUrlsRef = useRef<string[]>([]); // Store blob URLs for cleanup
-
   const quillRef = useRef<Quill | null>(null);
   const contentRef = useRef("");
 
@@ -14,6 +13,17 @@ const App: React.FC = () => {
       contentRef.current = quillRef.current.root.innerHTML; // Storing HTML content
       console.log("Updated Content:", contentRef.current);
     }
+  };
+
+  const handleSelectionChange = (
+    range: Range | null,
+    oldRange: Range | null,
+    source: string
+  ) => {
+    if (!range) return;
+    console.log("Old Selection:", oldRange);
+    console.log("New Selection:", range);
+    console.log("Source:", source);
   };
 
   return (
@@ -29,6 +39,7 @@ const App: React.FC = () => {
           defaultValue={new Delta().insert("Hello, world!\n")}
           blobUrlsRef={blobUrlsRef}
           onTextChange={handleTextChange}
+          onSelectionChange={handleSelectionChange}
         />
         <input
           type="submit"

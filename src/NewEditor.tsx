@@ -2,7 +2,6 @@ import {
   forwardRef,
   MutableRefObject,
   useEffect,
-  useLayoutEffect,
   useRef,
 } from "react";
 import Quill, { Delta, Range } from "quill";
@@ -47,13 +46,6 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
     ref
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const onTextChangeRef = useRef(onTextChange);
-    const onSelectionChangeRef = useRef(onSelectionChange);
-
-    useLayoutEffect(() => {
-      onTextChangeRef.current = onTextChange;
-      onSelectionChangeRef.current = onSelectionChange;
-    });
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -91,12 +83,12 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
       }
 
       quill.on("text-change", (delta, oldDelta, source) => {
-        onTextChangeRef.current?.(delta, oldDelta, source);
+        onTextChange?.(delta, oldDelta, source);
         removeUnusedBlobUrls(quill, blobUrlsRef);
       });
 
       quill.on("selection-change", (range, oldRange, source) => {
-        onSelectionChangeRef.current?.(range, oldRange, source);
+        onSelectionChange?.(range, oldRange, source);
       });
 
       // ✅ Set ref directly (no need for `quillInstance`)
@@ -116,7 +108,7 @@ const NewEditor = forwardRef<Quill | null, EditorProps>(
         blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         blobUrlsRef.current = [];
       };
-    }, [blobUrlsRef, defaultValue, ref]);
+    }, [blobUrlsRef, defaultValue, onSelectionChange, onTextChange, ref]);
 
     useEffect(() => {
       if (ref && typeof ref !== "function" && ref.current) {
